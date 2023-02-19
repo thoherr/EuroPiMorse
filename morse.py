@@ -29,7 +29,7 @@ cv6: not used
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled
+from europi import oled, din
 from europi_script import EuroPiScript
 
 VERSION = "0.1"
@@ -37,8 +37,8 @@ VERSION = "0.1"
 # UI timing
 
 SAVE_STATE_INTERVAL = 5000
-SHORT_PRESSED_INTERVAL = 600  # feels about 1 second
-LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
+# SHORT_PRESSED_INTERVAL = 600  # feels about 1 second
+# LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
 
 # Morse code timing
 # See https://en.wikipedia.org/wiki/Morse_code#Representation,_timing,_and_speeds or
@@ -53,68 +53,75 @@ WORD_GAP = 7 * DIT_LEN
 # Morse code encoding
 DIT = "."
 DAH = "_"
-MORSE_CODE = {
+
+class MorseCharacter:
+    def __init__(self, char, sequence):
+        self.char = char
+        self.sequence = sequence
+
+
+MORSE_CODE = [
     # latin letters
-    "A": "._",
-    "B": "_...",
-    "C": "_._.",
-    "D": "_..",
-    "E": ".",
-    "F": ".._.",
-    "G": "__.",
-    "H": "....",
-    "I": "..",
-    "J": ".___",
-    "K": "_._",
-    "L": "._..",
-    "M": "__",
-    "N": "_.",
-    "O": "___",
-    "P": ".__.",
-    "Q": "__._",
-    "R": "._.",
-    "S": "...",
-    "T": "_",
-    "U": ".._",
-    "V": "..._",
-    "W": ".__",
-    "X": "_.._",
-    "Y": "_.__",
-    "Z": "__..",
+    MorseCharacter("A", "._"),
+    MorseCharacter("B", "_..."),
+    MorseCharacter("C", "_._."),
+    MorseCharacter("D", "_.."),
+    MorseCharacter("E", "."),
+    MorseCharacter("F", ".._."),
+    MorseCharacter("G", "__."),
+    MorseCharacter("H", "...."),
+    MorseCharacter("I", ".."),
+    MorseCharacter("J", ".___"),
+    MorseCharacter("K", "_._"),
+    MorseCharacter("L", "._.."),
+    MorseCharacter("M", "__"),
+    MorseCharacter("N", "_."),
+    MorseCharacter("O", "___"),
+    MorseCharacter("P", ".__."),
+    MorseCharacter("Q", "__._"),
+    MorseCharacter("R", "._."),
+    MorseCharacter("S", "..."),
+    MorseCharacter("T", "_"),
+    MorseCharacter("U", ".._"),
+    MorseCharacter("V", "..._"),
+    MorseCharacter("W", ".__"),
+    MorseCharacter("X", "_.._"),
+    MorseCharacter("Y", "_.__"),
+    MorseCharacter("Z", "__.."),
     # digits
-    "1": ".____",
-    "2": "..___",
-    "3": "...__",
-    "4": "...._",
-    "5": ".....",
-    "6": "_....",
-    "7": "__...",
-    "8": "___..",
-    "9": "____.",
-    "0": "_____",
+    MorseCharacter("1", ".____"),
+    MorseCharacter("2", "..___"),
+    MorseCharacter("3", "...__"),
+    MorseCharacter("4", "...._"),
+    MorseCharacter("5", "....."),
+    MorseCharacter("6", "_...."),
+    MorseCharacter("7", "__..."),
+    MorseCharacter("8", "___.."),
+    MorseCharacter("9", "____."),
+    MorseCharacter("0", "_____"),
     # umlauts and ligatures - not imlemented yet
     # symbols
-    ".": "._._._",  # AAA
-    ",": "__..__",  # MIM
-    ":": "___...",  # OS
-    ";": "_._._.",  # NNN
-    "?": "..__..",  # IMI
-    "!": "_._.__",
-    "-": "_...._",  # BA
-    "_": "..__._",  # UK
-    "(": "_.__.",   # KN
-    ")": "_.__._",  # KK
-    "'": ".____.",  # JN
-    "=": "_..._",   # BT
-    "+": "._._.",   # AR
-    "/": "_.._.",   # DN
-    "@": ".__._.",  # AC
-    "\"": "._.._.",
-}
+    MorseCharacter(".", "._._._"),  # AAA
+    MorseCharacter(",", "__..__"),  # MIM
+    MorseCharacter(":", "___..."),  # OS
+    MorseCharacter(";", "_._._."),  # NNN
+    MorseCharacter("?", "..__.."),  # IMI
+    MorseCharacter("!", "_._.__"),
+    MorseCharacter("-", "_...._"),  # BA
+    MorseCharacter("_", "..__._"),  # UK
+    MorseCharacter("(", "_.__."),   # KN
+    MorseCharacter(")", "_.__._"),  # KK
+    MorseCharacter("'", ".____."),  # JN
+    MorseCharacter("=", "_..._"),   # BT
+    MorseCharacter("+", "._._."),   # AR
+    MorseCharacter("/", "_.._."),   # DN
+    MorseCharacter("@", ".__._."),  # AC
+    MorseCharacter("\"", "._.._."),
+]
 
 
 class Morse(EuroPiScript):
-    initial_state = "HELLO WORLD"
+    default_text = "HELLO WORLD"
     state_saved = True
 
     def __init__(self):
@@ -125,6 +132,11 @@ class Morse(EuroPiScript):
         self.load_state()
 
         self.display_data_changed = True
+
+        @din.handler
+        def clock():
+            self.current_step = (self.current_step + 1) % self.looped_steps
+            self.update_cvs()
 
     @classmethod
     def display_name(cls):
