@@ -58,6 +58,9 @@ class MorseCharacter:
     def __init__(self, char, sequence):
         self.char = char
         self.sequence = sequence
+        self.duration = DIT_LEN * (len(self.sequence) - 1)
+        for c in sequence:
+            self.duration = self.duration + (DIT_LEN if c == DIT else DAH_LEN)
 
 
 MORSE_CHARACTERS = [
@@ -124,7 +127,7 @@ MORSE_CHARACTERS = [
 MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
 
 class Morse(EuroPiScript):
-    default_text = "HELLO WORLD"
+    default_text = "HELLO WORLD "
     state_saved = True
 
     def __init__(self):
@@ -173,7 +176,7 @@ class Morse(EuroPiScript):
             # TODO: Implement
             c = self.default_text[self.tick]
             mc = MORSE_CODE[c]
-            oled.centre_text(f"{mc.char}\n{mc.sequence}")
+            oled.centre_text(f"{mc.char}\n{mc.sequence}\n{mc.duration}")
 
             oled.show()
 
