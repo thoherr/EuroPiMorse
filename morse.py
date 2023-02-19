@@ -60,7 +60,7 @@ class MorseCharacter:
         self.sequence = sequence
 
 
-MORSE_CODE = [
+MORSE_CHARACTERS = [
     # latin letters
     MorseCharacter("A", "._"),
     MorseCharacter("B", "_..."),
@@ -117,8 +117,11 @@ MORSE_CODE = [
     MorseCharacter("/", "_.._."),   # DN
     MorseCharacter("@", ".__._."),  # AC
     MorseCharacter("\"", "._.._."),
+
+    MorseCharacter(" ", ""),
 ]
 
+MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
 
 class Morse(EuroPiScript):
     default_text = "HELLO WORLD"
@@ -130,13 +133,14 @@ class Morse(EuroPiScript):
         oled.contrast(0)
 
         self.load_state()
+        self.tick = 0
+        self.duration = len(self.default_text)
 
         self.display_data_changed = True
 
         @din.handler
-        def clock():
-            self.current_step = (self.current_step + 1) % self.looped_steps
-            self.update_cvs()
+        def din_handler():
+            self.clock()
 
     @classmethod
     def display_name(cls):
@@ -155,6 +159,10 @@ class Morse(EuroPiScript):
             # TODO: Implement
             pass
 
+    def clock(self):
+        self.tick = (self.tick + 1) % self.duration
+        self.update_cvs()
+
     def update_cvs(self):
         pass
 
@@ -163,6 +171,9 @@ class Morse(EuroPiScript):
             oled.fill(0)
 
             # TODO: Implement
+            c = self.default_text[self.tick]
+            mc = MORSE_CODE[c]
+            oled.centre_text(f"{mc.char}\n{mc.sequence}")
 
             oled.show()
 
@@ -175,7 +186,8 @@ class Morse(EuroPiScript):
             self.update_cvs()
             self.update_display()
             self.save_state()
-            sleep(0.01)
+            sleep(1)
+            self.clock()
 
 
 # Main script execution
