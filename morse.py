@@ -72,7 +72,7 @@ class MorseCharacter:
     def __init__(self, char, sequence):
         self.char = char
         self.sequence = sequence
-        if char != "EOC" and char != "EOW":
+        if char != "EOC" and char != "EOM":
             self.sequence = " ".join(self.sequence)
         self.gates = []
         for sym in self.sequence:
@@ -146,7 +146,7 @@ MORSE_CHARACTERS = [
 MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
 EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
 EOW_MC = MORSE_CODE[EOW_CHAR]
-EOW_CODE = MorseCharacter("EOW", " " * EOW_GAP_LEN),  # probably we will never need this one...
+EOM_MC = MorseCharacter("EOM", " " * EOW_GAP_LEN)
 
 
 class Morse(EuroPiScript):
@@ -166,6 +166,7 @@ class Morse(EuroPiScript):
         self.dit_tick = -1
         self.dits_in_char = 1
         self.mc = EOC_MC
+        self.cache_mc_data()
 
         self.display_data_changed = True
 
@@ -190,16 +191,21 @@ class Morse(EuroPiScript):
             # TODO: Implement
             pass
 
+    def cache_mc_data(self):
+        self.dits_in_char = self.mc.duration
+        self.gates = self.mc.gates
+
     def clock(self):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
-            if self.mc == EOC_MC:
+            if self.mc != EOM_MC and self.character_tick + 1 == len(self.text):
+                self.mc = EOM_MC
+            elif self.mc == EOC_MC or self.mc == EOM_MC:
                 self.character_tick = (self.character_tick + 1) % len(self.text)
                 self.mc = MORSE_CODE[self.text[self.character_tick]]
             else:
                 self.mc = EOC_MC
-            self.dits_in_char = self.mc.duration
-            self.gates = self.mc.gates
+            self.cache_mc_data()
         self.update_cvs()
 
     def update_cvs(self):
@@ -208,7 +214,7 @@ class Morse(EuroPiScript):
         PITCH_OUT.voltage(PITCH_CV)
         EOC_OUT.value(self.mc == EOC_MC)
         EOW_OUT.value(self.mc == EOW_MC)
-        EOM_OUT.value(self.character_tick == 0 and self.dit_tick == 0)
+        EOM_OUT.value(self.mc == EOM_MC)
 
     def update_display(self):
         if self.display_data_changed:
@@ -225,7 +231,6 @@ class Morse(EuroPiScript):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
         sleep(1)
         while True:
-            self.clock()
             self.update_display()
             self.save_state()
             sleep(0.1)
