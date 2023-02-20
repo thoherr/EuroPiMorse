@@ -48,6 +48,7 @@ DAH_LEN = 3 * DIT_LEN
 SYM_GAP_LEN = DIT_LEN
 EOC_GAP_LEN = 3 * DIT_LEN
 EOW_GAP_LEN = 7 * DIT_LEN
+EOM_GAP_LEN = 7 * DIT_LEN
 
 # Morse code encoding
 DIT = "."
@@ -140,13 +141,12 @@ MORSE_CHARACTERS = [
     MorseCharacter("/", "_.._."),  # DN
     MorseCharacter("@", ".__._."),  # AC
     MorseCharacter('"', "._.._."),
-    MorseCharacter(EOW_CHAR, " "), # this works because it will insert EOC before *and* after the blank
 ]
 
 MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
 EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
-EOW_MC = MORSE_CODE[EOW_CHAR]
-EOM_MC = MorseCharacter("EOM", " " * EOW_GAP_LEN)
+EOW_MC = MorseCharacter("EOW", " " * EOW_GAP_LEN)
+EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 
 
 class Morse(EuroPiScript):
@@ -200,7 +200,10 @@ class Morse(EuroPiScript):
         if self.dit_tick == 0:
             if self.mc != EOM_MC and self.character_tick + 1 == len(self.text):
                 self.mc = EOM_MC
-            elif self.mc == EOC_MC or self.mc == EOM_MC:
+            elif self.character_tick + 1 < len(self.text) and self.text[self.character_tick + 1] == EOW_CHAR:
+                self.character_tick = self.character_tick + 1
+                self.mc = EOW_MC
+            elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
                 self.character_tick = (self.character_tick + 1) % len(self.text)
                 self.mc = MORSE_CODE[self.text[self.character_tick]]
             else:
@@ -214,8 +217,8 @@ class Morse(EuroPiScript):
         gate = self.gates[self.dit_tick]
         GATE_OUT.value(gate)
         PITCH_OUT.voltage(PITCH_CV)
-        EOC_OUT.value(self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
-        EOW_OUT.value(self.mc == EOW_MC or self.mc == EOM_MC)
+        EOC_OUT.value((self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC) and self.dit_tick < EOC_GAP_LEN)
+        EOW_OUT.value(self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN)
         EOM_OUT.value(self.mc == EOM_MC)
 
     def update_display(self):
