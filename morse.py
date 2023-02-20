@@ -11,7 +11,7 @@ Description of UI elements is preliminary!
 din: clock (one DIT)
 ain: not used (probably selection of words/sentences generated some day)
 
-k1: select speed ??
+k1: select speed / pitch / ??
 k2: select text
 
 b1: start/stop morse code (on/off) in primary mode,
@@ -19,17 +19,17 @@ b1: start/stop morse code (on/off) in primary mode,
 b2: switch to menu mode
 
 cv1: morse signal (gate)
-cv2: not used
-cv3: not used
-cv4: end of sequence
-cv5: not used
+cv2: end of character
+cv3: end of word
+cv4: morse signal (CV)
+cv5: end of sequence
 cv6: not used
 
 """
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, din
+from europi import oled, din, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
 VERSION = "0.1"
@@ -45,22 +45,43 @@ SAVE_STATE_INTERVAL = 5000
 #     https://de.wikipedia.org/wiki/Morsecode#Zeitschema_und_Veranschaulichung
 
 DIT_LEN = 1
-DAH_LEN = 3
-SYM_GAP = DIT_LEN
-LETTER_GAP = 3 * DIT_LEN
-WORD_GAP = 7 * DIT_LEN
+DAH_LEN = 3 * DIT_LEN
+SYM_GAP_LEN = DIT_LEN
+EOC_GAP_LEN = 3 * DIT_LEN
+EOW_GAP_LEN = 7 * DIT_LEN
 
 # Morse code encoding
 DIT = "."
 DAH = "_"
 
+# "Morse code is often at a frequency between 600 and 800 Hz"
+# (see https://www.johndcook.com/blog/2022/02/25/morse-code-in-musical-notation)
+PITCH_CV = 4.33  # roughly E4 (659 Hz)
+
+# Special charaters in source/plain text and script
+EOW_CHAR = " "
+EOM_SEQ = "EOM"
+
+# Outputs
+GATE_OUT = cv1
+PITCH_OUT = cv4
+EOC_OUT = cv2
+EOW_OUT = cv3
+EOM_OUT = cv5
+
+
 class MorseCharacter:
     def __init__(self, char, sequence):
         self.char = char
         self.sequence = sequence
-        self.duration = DIT_LEN * (len(self.sequence) - 1)
-        for c in sequence:
-            self.duration = self.duration + (DIT_LEN if c == DIT else DAH_LEN)
+        if char != " " and char != "EOC" and char != "EOW":
+            self.sequence = " ".join(self.sequence)
+        self.gates = []
+        for sym in self.sequence:
+            self.gates.extend(
+                [True] if sym == DIT else [True] * 3 if sym == DAH else [False]
+            )
+        self.duration = len(self.gates)
 
 
 MORSE_CHARACTERS = [
@@ -112,19 +133,21 @@ MORSE_CHARACTERS = [
     MorseCharacter("!", "_._.__"),
     MorseCharacter("-", "_...._"),  # BA
     MorseCharacter("_", "..__._"),  # UK
-    MorseCharacter("(", "_.__."),   # KN
+    MorseCharacter("(", "_.__."),  # KN
     MorseCharacter(")", "_.__._"),  # KK
     MorseCharacter("'", ".____."),  # JN
-    MorseCharacter("=", "_..._"),   # BT
-    MorseCharacter("+", "._._."),   # AR
-    MorseCharacter("/", "_.._."),   # DN
+    MorseCharacter("=", "_..._"),  # BT
+    MorseCharacter("+", "._._."),  # AR
+    MorseCharacter("/", "_.._."),  # DN
     MorseCharacter("@", ".__._."),  # AC
-    MorseCharacter("\"", "._.._."),
-
-    MorseCharacter(" ", ""),
+    MorseCharacter('"', "._.._."),
+    MorseCharacter(" ", " " * EOW_GAP_LEN),
+    MorseCharacter("EOC", " " * EOC_GAP_LEN),
+    MorseCharacter("EOW", " " * EOW_GAP_LEN),
 ]
 
 MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
+
 
 class Morse(EuroPiScript):
     default_text = "HELLO WORLD "
