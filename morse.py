@@ -207,25 +207,26 @@ class Morse(EuroPiScript):
                 self.mc = EOC_MC
             self.cache_mc_data()
         self.update_cvs()
+        self.display_data_changed = True
+        
 
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
         GATE_OUT.value(gate)
         PITCH_OUT.voltage(PITCH_CV)
-        EOC_OUT.value(self.mc == EOC_MC)
-        EOW_OUT.value(self.mc == EOW_MC)
+        EOC_OUT.value(self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
+        EOW_OUT.value(self.mc == EOW_MC or self.mc == EOM_MC)
         EOM_OUT.value(self.mc == EOM_MC)
 
     def update_display(self):
         if self.display_data_changed:
             oled.fill(0)
 
-            # TODO: Implement
-            oled.centre_text(f"{self.text}\n{self.mc.char} - {self.mc.sequence}\n{self.gates[self.dit_tick]}")
+            oled.centre_text(f"{self.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}")
 
             oled.show()
 
-            display_data_changed = False
+            self.display_data_changed = False
 
     def main(self):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
@@ -233,7 +234,7 @@ class Morse(EuroPiScript):
         while True:
             self.update_display()
             self.save_state()
-            sleep(0.1)
+            sleep(0.01)
 
 
 # Main script execution
