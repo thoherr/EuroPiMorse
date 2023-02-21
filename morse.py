@@ -11,8 +11,8 @@ Description of UI elements is preliminary!
 din: clock (one DIT)
 ain: not used (probably selection of words/sentences generated some day)
 
-k1: select speed / pitch / ??
-k2: select text
+k1: select CV for pitch output
+k2: select text character
 
 b1: start/stop morse code (on/off) in primary mode,
     selection in menu mode
@@ -29,10 +29,10 @@ cv6: not used
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, din, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import oled, din, k1, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
-VERSION = "0.1"
+VERSION = "0.2"
 
 # UI timing
 
@@ -56,7 +56,11 @@ DAH = "_"
 
 # "Morse code is often at a frequency between 600 and 800 Hz"
 # (see https://www.johndcook.com/blog/2022/02/25/morse-code-in-musical-notation)
-PITCH_CV = 4.33  # roughly E4 (659 Hz)
+# a good value is e.g. PITCH_CV = 4.33, which is roughly E4 (659 Hz)
+# So we make the pitch adjustable with K1 and give it some variablilty
+MIN_PITCH_CV = 3.25 # roughly Eb3 (311 Hz)
+MAX_PITCH_CV = 5.0 # roughly C5 (1047 Hz)
+PITCH_CV_STEPS = int((MAX_PITCH_CV - MIN_PITCH_CV) * 12)
 
 # Word separator
 EOW_CHAR = " "
@@ -216,7 +220,8 @@ class Morse(EuroPiScript):
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
         GATE_OUT.value(gate)
-        PITCH_OUT.voltage(PITCH_CV)
+        pitch = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
+        PITCH_OUT.voltage(pitch)
         EOC_OUT.value((self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC) and self.dit_tick < EOC_GAP_LEN)
         EOW_OUT.value(self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN)
         EOM_OUT.value(self.mc == EOM_MC)
