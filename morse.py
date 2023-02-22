@@ -263,7 +263,7 @@ class Morse(EuroPiScript):
         self.text = self.default_text
         self.load_state()
 
-        self.mode = Running(self)
+        self.mode = Paused(self)
 
         self.display_data_changed = True
 
@@ -296,11 +296,8 @@ class Morse(EuroPiScript):
     def update_display(self):
         if self.display_data_changed:
             oled.fill(0)
-
             self.mode.update_display()
-
             oled.show()
-
             self.display_data_changed = False
 
     def main(self):
