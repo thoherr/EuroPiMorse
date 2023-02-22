@@ -159,27 +159,45 @@ EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
 EOW_MC = MorseCharacter("EOW", " " * EOW_GAP_LEN)
 EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 
+DEFAULT_TEXT = "HELLO WORLD"
+
+
+class State:
+    def __init__(self, text):
+        self.text = text
+        self.update_display = False
+        self.saved = True
+
 
 class Mode:
-    def __init__(self, name, morse_script):
+    def __init__(self, name, state):
         self.name = name
-        self.morse_script = morse_script
+        self.state = state
+        self.display_data_changed = True
 
     def clock(self):
         pass
 
+    def update_display(self):
+        if self.display_data_changed:
+            oled.fill(0)
+            self.paint_display()
+            oled.show()
+            self.display_data_changed = False
+
 
 class Running(Mode):
-    def __init__(self, morse_script):
-        super().__init__("RUNNING", morse_script)
+    def __init__(self, state):
+        super().__init__("RUNNING", state)
         self.character_tick = -1
         self.dit_tick = -1
         self.dits_in_char = 1
         self.mc = EOC_MC
         self.cache_mc_data()
 
-    def b1_pressed(self):
-        return Paused(self.morse_script)
+    def b1_short_press(self):
+        self.display_data_changed = True
+        return Paused(self.state)
 
     def cache_mc_data(self):
         self.dits_in_char = self.mc.duration
@@ -189,25 +207,25 @@ class Running(Mode):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
             if self.mc != EOM_MC and self.character_tick + 1 == len(
-                self.morse_script.text
+                self.state.text
             ):
                 self.mc = EOM_MC
             elif (
-                self.character_tick + 1 < len(self.morse_script.text)
-                and self.morse_script.text[self.character_tick + 1] == EOW_CHAR
+                self.character_tick + 1 < len(self.state.text)
+                and self.state.text[self.character_tick + 1] == EOW_CHAR
             ):
                 self.character_tick = self.character_tick + 1
                 self.mc = EOW_MC
             elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
                 self.character_tick = (self.character_tick + 1) % len(
-                    self.morse_script.text
+                    self.state.text
                 )
-                self.mc = MORSE_CODE[self.morse_script.text[self.character_tick]]
+                self.mc = MORSE_CODE[self.state.text[self.character_tick]]
             else:
                 self.mc = EOC_MC
             self.cache_mc_data()
         self.update_cvs()
-        self.morse_script.display_data_changed = True
+        self.display_data_changed = True
 
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
@@ -224,18 +242,19 @@ class Running(Mode):
         EOM_OUT.value(self.mc == EOM_MC)
         RUNNING_OUT.on()
 
-    def update_display(self):
+    def paint_display(self):
         oled.centre_text(
-            f"{self.morse_script.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
+            f"{self.state.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
         )
 
 
 class Paused(Mode):
-    def __init__(self, morse_script):
-        super().__init__("PAUSED", morse_script)
+    def __init__(self, state):
+        super().__init__("PAUSED", state)
 
-    def b1_pressed(self):
-        return Running(self.morse_script)
+    def b1_short_press(self):
+        self.display_data_changed = True
+        return Running(self.state)
 
     def update_cvs(self):
         cv1.off()
@@ -245,14 +264,13 @@ class Paused(Mode):
         cv5.off()
         cv6.off()
 
-    def update_display(self):
-        oled.centre_text(f"{self.morse_script.text}\n\n")
+    def paint_display(self):
+        oled.centre_text(f"{self.state.text}\n\n")
         oled.fill_rect(59, 18, 4, 8, 1)
         oled.fill_rect(65, 18, 4, 8, 1)
 
 
 class Morse(EuroPiScript):
-    default_text = "HELLO WORLD"
     state_saved = True
 
     def __init__(self):
@@ -260,12 +278,9 @@ class Morse(EuroPiScript):
 
         oled.contrast(0)
 
-        self.text = self.default_text
         self.load_state()
 
-        self.mode = Paused(self)
-
-        self.display_data_changed = True
+        self.mode = Paused(self.state)
 
         @din.handler
         def din_handler():
@@ -273,36 +288,30 @@ class Morse(EuroPiScript):
 
         @b1.handler
         def b1_handler():
-            self.mode = self.mode.b1_pressed()
-            self.display_data_changed = True
+            self.mode = self.mode.b1_short_press()
 
     @classmethod
     def display_name(cls):
         return "Morse code"
 
     def save_state(self):
-        if self.state_saved or self.last_saved() < SAVE_STATE_INTERVAL:
+        if self.state.saved or self.last_saved() < SAVE_STATE_INTERVAL:
             return
-        self.save_state_str(self.text)
-        self.state_saved = True
+        self.state.save_state_str(self.state.text)
+        self.state.saved = True
 
     def load_state(self):
-        state = self.load_state_str()
-        if state:
-            self.text = state
-
-    def update_display(self):
-        if self.display_data_changed:
-            oled.fill(0)
-            self.mode.update_display()
-            oled.show()
-            self.display_data_changed = False
+        state_str = self.load_state_str()
+        if state_str:
+            self.state = State(state_str)
+        else:
+            self.state = State(DEFAULT_TEXT)
 
     def main(self):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
         sleep(1)
         while True:
-            self.update_display()
+            self.mode.update_display()
             self.save_state()
             sleep(0.01)
 
