@@ -9,27 +9,29 @@ This script creates the gate signals for the morse code of a given/configurable 
 Description of UI elements is preliminary!
 
 din: clock (one DIT)
-ain: not used (probably selection of words/sentences generated some day)
+ain: not used (probably selection of words/sentences generated some day or start/stop of code)
 
 k1: select CV for pitch output
-k2: select text character
+k2: select text character in edit mode
 
 b1: start/stop morse code (on/off) in primary mode,
-    selection in menu mode
-b2: switch to menu mode
+    character selection in edit mode
+b2: switch to edit mode,
+    switch between cursor and character selection in edit mode
+    save changes and leave edit mode when long pressed (> 1 sec)
 
 cv1: morse signal (gate)
 cv2: end of character
 cv3: end of word
 cv4: morse signal (CV)
 cv5: end of sequence
-cv6: not used
+cv6: morse code active (running)
 
 """
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, din, k1, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import oled, din, k1, b1, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
 VERSION = "0.2"
@@ -58,8 +60,8 @@ DAH = "_"
 # (see https://www.johndcook.com/blog/2022/02/25/morse-code-in-musical-notation)
 # a good value is e.g. PITCH_CV = 4.33, which is roughly E4 (659 Hz)
 # So we make the pitch adjustable with K1 and give it some variablilty
-MIN_PITCH_CV = 3.25 # roughly Eb3 (311 Hz)
-MAX_PITCH_CV = 5.0 # roughly C5 (1047 Hz)
+MIN_PITCH_CV = 3.25  # roughly Eb3 (311 Hz)
+MAX_PITCH_CV = 5.0  # roughly C5 (1047 Hz)
 PITCH_CV_STEPS = int((MAX_PITCH_CV - MIN_PITCH_CV) * 12)
 
 # Word separator
@@ -71,6 +73,7 @@ PITCH_OUT = cv4
 EOC_OUT = cv2
 EOW_OUT = cv3
 EOM_OUT = cv5
+RUNNING_OUT = cv6
 
 
 class MorseCharacter:
@@ -82,7 +85,11 @@ class MorseCharacter:
         self.gates = []
         for sym in self.sequence:
             self.gates.extend(
-                [True] * DIT_LEN if sym == DIT else [True] * DAH_LEN if sym == DAH else [False] * SYM_GAP_LEN
+                [True] * DIT_LEN
+                if sym == DIT
+                else [True] * DAH_LEN
+                if sym == DAH
+                else [False] * SYM_GAP_LEN
             )
         self.duration = len(self.gates)
         # print(f"{self.char} -> {self.gates}")
@@ -156,6 +163,7 @@ EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 class Morse(EuroPiScript):
     default_text = "HELLO WORLD"
     state_saved = True
+    paused = False
 
     def __init__(self):
         super().__init__()
@@ -177,6 +185,11 @@ class Morse(EuroPiScript):
         @din.handler
         def din_handler():
             self.clock()
+
+        @b1.handler
+        def b1_handler():
+            self.paused = not self.paused
+            self.display_data_changed = True
 
     @classmethod
     def display_name(cls):
@@ -200,11 +213,16 @@ class Morse(EuroPiScript):
         self.gates = self.mc.gates
 
     def clock(self):
+        if self.paused:
+            return
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
             if self.mc != EOM_MC and self.character_tick + 1 == len(self.text):
                 self.mc = EOM_MC
-            elif self.character_tick + 1 < len(self.text) and self.text[self.character_tick + 1] == EOW_CHAR:
+            elif (
+                self.character_tick + 1 < len(self.text)
+                and self.text[self.character_tick + 1] == EOW_CHAR
+            ):
                 self.character_tick = self.character_tick + 1
                 self.mc = EOW_MC
             elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
@@ -215,22 +233,34 @@ class Morse(EuroPiScript):
             self.cache_mc_data()
         self.update_cvs()
         self.display_data_changed = True
-        
 
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
         GATE_OUT.value(gate)
         pitch = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
         PITCH_OUT.voltage(pitch)
-        EOC_OUT.value((self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC) and self.dit_tick < EOC_GAP_LEN)
-        EOW_OUT.value(self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN)
+        EOC_OUT.value(
+            (self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
+            and self.dit_tick < EOC_GAP_LEN
+        )
+        EOW_OUT.value(
+            self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN
+        )
         EOM_OUT.value(self.mc == EOM_MC)
+        RUNNING_OUT.value(not self.paused)
 
     def update_display(self):
         if self.display_data_changed:
             oled.fill(0)
 
-            oled.centre_text(f"{self.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}")
+            if self.paused:
+                oled.centre_text(f"{self.text}\n\n")
+                oled.fill_rect(59, 18, 4, 8, 1)
+                oled.fill_rect(65, 18, 4, 8, 1)
+            else:
+                oled.centre_text(
+                    f"{self.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
+                )
 
             oled.show()
 
