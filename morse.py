@@ -39,8 +39,8 @@ VERSION = "0.3"
 # UI timing
 
 SAVE_STATE_INTERVAL = 5000
-# SHORT_PRESSED_INTERVAL = 600  # feels about 1 second
-# LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
+SHORT_PRESSED_INTERVAL = 600  # feels about 1 second
+LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
 
 # Morse code timing
 # See https://en.wikipedia.org/wiki/Morse_code#Representation,_timing,_and_speeds or
@@ -178,6 +178,15 @@ class Mode:
     def clock(self):
         pass
 
+    def b1_klick(self):
+        pass
+
+    def b1_short_press(self):
+        pass
+
+    def b1_long_press(self):
+        pass
+
     def update_display(self):
         if self.display_data_changed:
             oled.fill(0)
@@ -195,7 +204,7 @@ class Running(Mode):
         self.mc = EOC_MC
         self.cache_mc_data()
 
-    def b1_short_press(self):
+    def b1_klick(self):
         self.display_data_changed = True
         return Paused(self.state)
 
@@ -252,7 +261,7 @@ class Paused(Mode):
     def __init__(self, state):
         super().__init__("PAUSED", state)
 
-    def b1_short_press(self):
+    def b1_klick(self):
         self.display_data_changed = True
         return Running(self.state)
 
@@ -286,9 +295,15 @@ class Morse(EuroPiScript):
         def din_handler():
             self.mode.clock()
 
-        @b1.handler
+        @b1.handler_falling
         def b1_handler():
-            self.mode = self.mode.b1_short_press()
+            time_pressed = ticks_diff(ticks_ms(), b1.last_pressed())
+            if time_pressed >= LONG_PRESSED_INTERVAL:
+                self.mode = self.mode.b1_long_press()
+            elif time_pressed >= SHORT_PRESSED_INTERVAL:
+                self.mode = self.mode.b1_short_press()
+            else:
+                self.mode = self.mode.b1_klick()
 
     @classmethod
     def display_name(cls):
