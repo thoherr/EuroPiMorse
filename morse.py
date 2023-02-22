@@ -165,6 +165,9 @@ class Mode:
         self.name = name
         self.morse_script = morse_script
 
+    def clock(self):
+        pass
+
 
 class Running(Mode):
     def __init__(self, morse_script):
@@ -233,9 +236,6 @@ class Paused(Mode):
 
     def b1_pressed(self):
         return Running(self.morse_script)
-
-    def clock(self):
-        pass
 
     def update_cvs(self):
         cv1.off()
