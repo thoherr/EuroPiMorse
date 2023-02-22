@@ -162,8 +162,8 @@ EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 
 class Morse(EuroPiScript):
     default_text = "HELLO WORLD"
-    state_saved = True
     paused = False
+    state_saved = True
 
     def __init__(self):
         super().__init__()
@@ -236,17 +236,19 @@ class Morse(EuroPiScript):
 
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
-        GATE_OUT.value(gate)
-        pitch = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
-        PITCH_OUT.voltage(pitch)
+        GATE_OUT.value(gate and not self.paused)
+        self.pitch = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
+        PITCH_OUT.voltage(0 if self.paused else self.pitch)
         EOC_OUT.value(
             (self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
             and self.dit_tick < EOC_GAP_LEN
+            and not self.paused
         )
         EOW_OUT.value(
-            self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN
+            (self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN)
+            and not self.paused
         )
-        EOM_OUT.value(self.mc == EOM_MC)
+        EOM_OUT.value(self.mc == EOM_MC and not self.paused)
         RUNNING_OUT.value(not self.paused)
 
     def update_display(self):
