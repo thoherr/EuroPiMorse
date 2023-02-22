@@ -283,15 +283,13 @@ class Morse(EuroPiScript):
     def save_state(self):
         if self.state_saved or self.last_saved() < SAVE_STATE_INTERVAL:
             return
-        # TODO: Implement
-        self.save_state_str("NOT IMPLEMENTED")
+        self.save_state_str(self.text)
         self.state_saved = True
 
     def load_state(self):
         state = self.load_state_str()
         if state:
-            # TODO: Implement
-            pass
+            self.text = state
 
     def update_display(self):
         if self.display_data_changed:
