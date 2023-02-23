@@ -60,6 +60,7 @@ DAH = "_"
 # (see https://www.johndcook.com/blog/2022/02/25/morse-code-in-musical-notation)
 # a good value is e.g. PITCH_CV = 4.33, which is roughly E4 (659 Hz)
 # So we make the pitch adjustable with K1 and give it some variablilty
+DEFAULT_PITCH_CV = 4.33  # roughly E4 (659 Hz)
 MIN_PITCH_CV = 3.25  # roughly Eb3 (311 Hz)
 MAX_PITCH_CV = 5.0  # roughly C5 (1047 Hz)
 PITCH_CV_STEPS = int((MAX_PITCH_CV - MIN_PITCH_CV) * 12)
@@ -165,6 +166,7 @@ DEFAULT_TEXT = "HELLO WORLD"
 class State:
     def __init__(self, text):
         self.text = text
+        self.pitch_cv = DEFAULT_PITCH_CV
         self.update_display = False
         self.saved = True
 
@@ -179,12 +181,15 @@ class Mode:
         pass
 
     def b1_klick(self):
-        pass
+        return self
 
     def b1_short_press(self):
-        pass
+        return self
 
     def b1_long_press(self):
+        return self
+
+    def update_state(self):
         pass
 
     def update_display(self):
@@ -207,6 +212,10 @@ class Running(Mode):
     def b1_klick(self):
         self.display_data_changed = True
         return Paused(self.state)
+
+    def b1_short_press(self):
+        self.display_data_changed = True
+        return ChangeCV(self)        
 
     def cache_mc_data(self):
         self.dits_in_char = self.mc.duration
@@ -239,8 +248,7 @@ class Running(Mode):
     def update_cvs(self):
         gate = self.gates[self.dit_tick]
         GATE_OUT.value(gate)
-        pitch = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
-        PITCH_OUT.voltage(pitch)
+        PITCH_OUT.voltage(self.state.pitch_cv)
         EOC_OUT.value(
             (self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
             and self.dit_tick < EOC_GAP_LEN
@@ -254,6 +262,36 @@ class Running(Mode):
     def paint_display(self):
         oled.centre_text(
             f"{self.state.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
+        )
+
+
+class ChangeCV(Mode):
+    def __init__(self, parent):
+        super().__init__("CHANGE_CV", parent.state)
+        self.parent = parent
+        self.old_cv = self.state.pitch_cv
+        self.current_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
+
+    def b1_klick(self):
+        self.display_data_changed = True
+        return self.parent
+
+    def clock(self):
+        self.parent.clock()
+
+    def update_cvs(self):
+        self.parent.update_cvs()
+
+    def update_state(self):
+        knob_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
+        if knob_cv != self.current_cv:
+            self.current_cv = knob_cv
+            self.state.pitch_cv = knob_cv
+            self.display_data_changed = True
+
+    def paint_display(self):
+        oled.centre_text(
+            f"{self.state.text}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
         )
 
 
@@ -326,6 +364,7 @@ class Morse(EuroPiScript):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
         sleep(1)
         while True:
+            self.mode.update_state()
             self.mode.update_display()
             self.save_state()
             sleep(0.01)
