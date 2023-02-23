@@ -14,11 +14,13 @@ ain: not used (probably selection of words/sentences generated some day or start
 k1: select CV for pitch output
 k2: select text character in edit mode
 
-b1: start/stop morse code (on/off) in primary mode,
+b1: start/stop morse code (switch between running and pause mode) with klick
+    enter CV adjustment mode when in running mode and with short (1-3 sec) press
+    save selection and return to running mode when in CV adjustment mode
     character selection in edit mode
-b2: switch to edit mode,
-    switch between cursor and character selection in edit mode
-    save changes and leave edit mode when long pressed (> 1 sec)
+b2: switch to edit text mode with klick,
+    switch between cursor and character selection in edit mode ??
+    save changes and leave edit mode when long pressed (> 1 sec) ??
 
 cv1: morse signal (gate)
 cv2: end of character
