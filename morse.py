@@ -33,7 +33,7 @@ cv6: morse code active (running)
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, din, k1, b1, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import oled, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
 VERSION = "0.3"
@@ -191,6 +191,15 @@ class Mode:
     def b1_long_press(self):
         return self
 
+    def b2_klick(self):
+        return self
+
+    def b2_short_press(self):
+        return self
+
+    def b2_long_press(self):
+        return self
+
     def update_state(self):
         pass
 
@@ -344,6 +353,16 @@ class Morse(EuroPiScript):
                 self.mode = self.mode.b1_short_press()
             else:
                 self.mode = self.mode.b1_klick()
+
+        @b2.handler_falling
+        def b2_handler():
+            time_pressed = ticks_diff(ticks_ms(), b2.last_pressed())
+            if time_pressed >= LONG_PRESSED_INTERVAL:
+                self.mode = self.mode.b2_long_press()
+            elif time_pressed >= SHORT_PRESSED_INTERVAL:
+                self.mode = self.mode.b2_short_press()
+            else:
+                self.mode = self.mode.b2_klick()
 
     @classmethod
     def display_name(cls):
