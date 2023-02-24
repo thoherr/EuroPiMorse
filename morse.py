@@ -325,7 +325,7 @@ class ChangeCV(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.text[self.state.text_index]}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
+            f"{self.state.texts[self.state.text_index]}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
         )
 
 
