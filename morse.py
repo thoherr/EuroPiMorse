@@ -11,16 +11,15 @@ Description of UI elements is preliminary!
 din: clock (one DIT)
 ain: not used (probably selection of words/sentences generated some day or start/stop of code)
 
-k1: select CV for pitch output
+k1: select CV for pitch output when in CV adjustment mode
+    select character to edit when in edit mode
 k2: select text character in edit mode
 
 b1: start/stop morse code (switch between running and pause mode) with klick
     enter CV adjustment mode when in running mode and with short (1-3 sec) press
-    save selection and return to running mode when in CV adjustment mode
-    character selection in edit mode
-b2: switch to edit text mode with klick,
-    switch between cursor and character selection in edit mode ??
-    save changes and leave edit mode when long pressed (> 1 sec) ??
+    save selection and return to running mode when in CV adjustment or text selection mode
+b2: switch to text selection mode with klick,
+    discard changes and return to running mode when in CV adjustment or text selection mode
 
 cv1: morse signal (gate)
 cv2: end of character
@@ -36,7 +35,7 @@ from utime import ticks_diff, ticks_ms
 from europi import oled, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
-VERSION = "0.3"
+VERSION = "0.4"
 
 # UI timing
 
@@ -162,12 +161,21 @@ EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
 EOW_MC = MorseCharacter("EOW", " " * EOW_GAP_LEN)
 EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 
-DEFAULT_TEXT = "HELLO WORLD"
+DEFAULT_TEXTS = [
+    "HELLO WORLD",
+    "TEMPUS FUGIT",
+    "SOS",
+    "HELP",
+    "EVE",
+    "OMNE VIVUM EX VIVO",
+    "THAT'S ONE SMALL STEP FOR A MAN, ONE GIANT LEAP FOR MANKIND.",
+]
 
 
 class State:
-    def __init__(self, text):
-        self.text = text
+    def __init__(self, texts):
+        self.texts = texts
+        self.text_index = 0
         self.pitch_cv = DEFAULT_PITCH_CV
         self.update_display = False
         self.saved = True
@@ -214,11 +222,7 @@ class Mode:
 class Running(Mode):
     def __init__(self, state):
         super().__init__("RUNNING", state)
-        self.character_tick = -1
-        self.dit_tick = -1
-        self.dits_in_char = 1
-        self.mc = EOC_MC
-        self.cache_mc_data()
+        self.reset_clock()
 
     def b1_klick(self):
         self.display_data_changed = True
@@ -226,30 +230,44 @@ class Running(Mode):
 
     def b1_short_press(self):
         self.display_data_changed = True
-        return ChangeCV(self)        
+        return ChangeCV(self)
+
+    def b2_klick(self):
+        self.display_data_changed = True
+        return ChangeText(self)
 
     def cache_mc_data(self):
         self.dits_in_char = self.mc.duration
         self.gates = self.mc.gates
 
+    def reset_clock(self):
+        self.character_tick = -1
+        self.dit_tick = -1
+        self.dits_in_char = 1
+        self.mc = EOC_MC
+        self.cache_mc_data()
+
     def clock(self):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
             if self.mc != EOM_MC and self.character_tick + 1 == len(
-                self.state.text
+                self.state.texts[self.state.text_index]
             ):
                 self.mc = EOM_MC
             elif (
-                self.character_tick + 1 < len(self.state.text)
-                and self.state.text[self.character_tick + 1] == EOW_CHAR
+                self.character_tick + 1 < len(self.state.texts[self.state.text_index])
+                and self.state.texts[self.state.text_index][self.character_tick + 1]
+                == EOW_CHAR
             ):
                 self.character_tick = self.character_tick + 1
                 self.mc = EOW_MC
             elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
                 self.character_tick = (self.character_tick + 1) % len(
-                    self.state.text
+                    self.state.texts[self.state.text_index]
                 )
-                self.mc = MORSE_CODE[self.state.text[self.character_tick]]
+                self.mc = MORSE_CODE[
+                    self.state.texts[self.state.text_index][self.character_tick]
+                ]
             else:
                 self.mc = EOC_MC
             self.cache_mc_data()
@@ -272,7 +290,7 @@ class Running(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.text}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
+            f"{self.state.texts[self.state.text_index]}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
         )
 
 
@@ -284,6 +302,11 @@ class ChangeCV(Mode):
         self.current_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
 
     def b1_klick(self):
+        self.display_data_changed = True
+        return self.parent
+
+    def b2_klick(self):
+        self.state.pitch_cv = self.old_cv
         self.display_data_changed = True
         return self.parent
 
@@ -302,7 +325,43 @@ class ChangeCV(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.text}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
+            f"{self.state.text[self.state.text_index]}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
+        )
+
+
+class ChangeText(Mode):
+    def __init__(self, parent):
+        super().__init__("CHANGE_TEXT", parent.state)
+        self.parent = parent
+        self.new_index = self.state.text_index
+        self.current_index = k1.range(len(self.state.texts))
+
+    def b1_klick(self):
+        self.state.text_index = self.new_index
+        self.parent.reset_clock()
+        self.display_data_changed = True
+        return self.parent
+
+    def b2_klick(self):
+        self.display_data_changed = True
+        return self.parent
+
+    def clock(self):
+        self.parent.clock()
+
+    def update_cvs(self):
+        self.parent.update_cvs()
+
+    def update_state(self):
+        index = k1.range(len(self.state.texts))
+        if index != self.current_index:
+            self.current_index = index
+            self.new_index = index
+            self.display_data_changed = True
+
+    def paint_display(self):
+        oled.centre_text(
+            f"{self.state.texts[self.state.text_index]}\n-->\n{self.state.texts[self.new_index]}"
         )
 
 
@@ -323,7 +382,7 @@ class Paused(Mode):
         cv6.off()
 
     def paint_display(self):
-        oled.centre_text(f"{self.state.text}\n\n")
+        oled.centre_text(f"{self.state.texts[self.state.text_index]}\n\n")
         oled.fill_rect(59, 18, 4, 8, 1)
         oled.fill_rect(65, 18, 4, 8, 1)
 
@@ -371,15 +430,17 @@ class Morse(EuroPiScript):
     def save_state(self):
         if self.state.saved or self.last_saved() < SAVE_STATE_INTERVAL:
             return
-        self.state.save_state_str(self.state.text)
+        self.state.save_state_str(self.state.texts)
+        # TODO: Save current text index
         self.state.saved = True
 
     def load_state(self):
+        # TODO: Load current text index
         state_str = self.load_state_str()
         if state_str:
-            self.state = State(state_str)
+            self.state = State(state_str.splitlines())
         else:
-            self.state = State(DEFAULT_TEXT)
+            self.state = State(DEFAULT_TEXTS)
 
     def main(self):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
