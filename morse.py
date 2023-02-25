@@ -222,7 +222,6 @@ class Mode:
         self.blink()
 
     def paint_centered_text(self, line, content):
-        content = self.state.texts[self.state.text_index]
         x = int((oled.width - ((len(content) + 1) * 7)) / 2) - 1
         y = int((line * 9) + 1)
         oled.text(f"{content}", x, y)
