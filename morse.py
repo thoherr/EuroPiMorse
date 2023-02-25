@@ -340,6 +340,7 @@ class ChangeCV(Mode):
             self.current_cv = knob_cv
             self.state.pitch_cv = knob_cv
             self.display_data_changed = True
+        self.display_data_changed = self.display_data_changed or self.parent.display_data_changed
 
     def paint_display(self):
         if self.parent.gate:
@@ -378,6 +379,7 @@ class ChangeText(Mode):
             self.current_index = index
             self.new_index = index
             self.display_data_changed = True
+        self.display_data_changed = self.display_data_changed or self.parent.display_data_changed
 
     def paint_display(self):
         if self.parent.gate:
