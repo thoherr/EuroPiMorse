@@ -400,8 +400,9 @@ class Paused(Mode):
         cv6.off()
 
     def paint_display(self):
-        self.paint_centered_text(0, self.state.texts[self.state.text_index])
         if self.blink_on:
+            self.paint_centered_text(0, self.state.texts[self.state.text_index])
+        else:
             oled.fill_rect(59, 18, 4, 8, 1)
             oled.fill_rect(65, 18, 4, 8, 1)
 
