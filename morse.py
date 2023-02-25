@@ -191,6 +191,9 @@ class Mode:
         self.blink_on = False
         self.display_data_changed = True
 
+    def current_text(self):
+        return self.state.texts[self.state.text_index]
+
     def clock(self):
         pass
 
@@ -266,22 +269,22 @@ class Running(Mode):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
             if self.mc != EOM_MC and self.character_tick + 1 == len(
-                self.state.texts[self.state.text_index]
+                self.current_text()
             ):
                 self.mc = EOM_MC
             elif (
-                self.character_tick + 1 < len(self.state.texts[self.state.text_index])
-                and self.state.texts[self.state.text_index][self.character_tick + 1]
+                self.character_tick + 1 < len(self.current_text())
+                and self.current_text()[self.character_tick + 1]
                 == EOW_CHAR
             ):
                 self.character_tick = self.character_tick + 1
                 self.mc = EOW_MC
             elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
                 self.character_tick = (self.character_tick + 1) % len(
-                    self.state.texts[self.state.text_index]
+                    self.current_text()
                 )
                 self.mc = MORSE_CODE[
-                    self.state.texts[self.state.text_index][self.character_tick]
+                    self.current_text()[self.character_tick]
                 ]
             else:
                 self.mc = EOC_MC
@@ -305,7 +308,7 @@ class Running(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.texts[self.state.text_index]}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
+            f"{self.current_text()}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
         )
 
 
@@ -341,7 +344,7 @@ class ChangeCV(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.texts[self.state.text_index]}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
+            f"{self.current_text()}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
         )
 
 
@@ -378,7 +381,7 @@ class ChangeText(Mode):
 
     def paint_display(self):
         oled.centre_text(
-            f"{self.state.texts[self.state.text_index]}\n-->\n{self.state.texts[self.new_index]}"
+            f"{self.current_text()}\n-->\n{self.state.texts[self.new_index]}"
         )
 
 
@@ -400,7 +403,7 @@ class Paused(Mode):
 
     def paint_display(self):
         if self.blink_on:
-            self.paint_centered_text(0, self.state.texts[self.state.text_index])
+            self.paint_centered_text(0, self.current_text())
         else:
             oled.fill_rect(59, 18, 4, 8, 1)
             oled.fill_rect(65, 18, 4, 8, 1)
