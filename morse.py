@@ -257,6 +257,7 @@ class Running(Mode):
     def cache_mc_data(self):
         self.dits_in_char = self.mc.duration
         self.gates = self.mc.gates
+        self.gate = False
 
     def reset_clock(self):
         self.character_tick = -1
@@ -274,8 +275,7 @@ class Running(Mode):
                 self.mc = EOM_MC
             elif (
                 self.character_tick + 1 < len(self.current_text())
-                and self.current_text()[self.character_tick + 1]
-                == EOW_CHAR
+                and self.current_text()[self.character_tick + 1] == EOW_CHAR
             ):
                 self.character_tick = self.character_tick + 1
                 self.mc = EOW_MC
@@ -283,18 +283,16 @@ class Running(Mode):
                 self.character_tick = (self.character_tick + 1) % len(
                     self.current_text()
                 )
-                self.mc = MORSE_CODE[
-                    self.current_text()[self.character_tick]
-                ]
+                self.mc = MORSE_CODE[self.current_text()[self.character_tick]]
             else:
                 self.mc = EOC_MC
             self.cache_mc_data()
+        self.gate = self.gates[self.dit_tick]
         self.update_cvs()
         self.display_data_changed = True
 
     def update_cvs(self):
-        gate = self.gates[self.dit_tick]
-        GATE_OUT.value(gate)
+        GATE_OUT.value(self.gate)
         PITCH_OUT.voltage(self.state.pitch_cv)
         EOC_OUT.value(
             (self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC)
@@ -307,9 +305,10 @@ class Running(Mode):
         RUNNING_OUT.on()
 
     def paint_display(self):
-        oled.centre_text(
-            f"{self.current_text()}\n{self.mc.sequence}\n{self.mc.char} {'*' if self.gates[self.dit_tick] else ' '}"
-        )
+        if self.gate:
+            self.paint_centered_text(0, self.current_text())
+        self.paint_centered_text(1, self.mc.sequence)
+        self.paint_centered_text(2, self.mc.char)
 
 
 class ChangeCV(Mode):
@@ -343,9 +342,10 @@ class ChangeCV(Mode):
             self.display_data_changed = True
 
     def paint_display(self):
-        oled.centre_text(
-            f"{self.current_text()}\nCUR CV {self.old_cv:1.2f}\nNEW CV {self.state.pitch_cv:1.2f}"
-        )
+        if self.parent.gate:
+            self.paint_centered_text(0, self.current_text())
+        self.paint_centered_text(1, f"CUR CV {self.old_cv:1.2f}")
+        self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.2f}")
 
 
 class ChangeText(Mode):
@@ -380,9 +380,11 @@ class ChangeText(Mode):
             self.display_data_changed = True
 
     def paint_display(self):
-        oled.centre_text(
-            f"{self.current_text()}\n-->\n{self.state.texts[self.new_index]}"
-        )
+        if self.parent.gate:
+            self.paint_centered_text(0, self.current_text())
+        if self.blink_on:
+            self.paint_centered_text(1, "-->")
+        self.paint_centered_text(2, self.state.texts[self.new_index])
 
 
 class Paused(Mode):
