@@ -43,6 +43,9 @@ SAVE_STATE_INTERVAL = 5000
 SHORT_PRESSED_INTERVAL = 600  # feels about 1 second
 LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
 
+BLINK_MS = 700
+BLINK_RATIO = 2
+
 # Morse code timing
 # See https://en.wikipedia.org/wiki/Morse_code#Representation,_timing,_and_speeds or
 #     https://de.wikipedia.org/wiki/Morsecode#Zeitschema_und_Veranschaulichung
@@ -185,6 +188,7 @@ class Mode:
     def __init__(self, name, state):
         self.name = name
         self.state = state
+        self.blink_on = False
         self.display_data_changed = True
 
     def clock(self):
@@ -208,8 +212,14 @@ class Mode:
     def b2_long_press(self):
         return self
 
+    def blink(self):
+        on = (ticks_ms() % BLINK_MS) < ( BLINK_MS / BLINK_RATIO )
+        if self.blink_on != on:
+            self.blink_on = on
+            self.display_data_changed = True
+
     def update_state(self):
-        pass
+        self.blink()
 
     def update_display(self):
         if self.display_data_changed:
@@ -317,6 +327,7 @@ class ChangeCV(Mode):
         self.parent.update_cvs()
 
     def update_state(self):
+        super().update_state()
         knob_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
         if knob_cv != self.current_cv:
             self.current_cv = knob_cv
@@ -353,6 +364,7 @@ class ChangeText(Mode):
         self.parent.update_cvs()
 
     def update_state(self):
+        super().update_state()
         index = k1.range(len(self.state.texts))
         if index != self.current_index:
             self.current_index = index
@@ -383,8 +395,9 @@ class Paused(Mode):
 
     def paint_display(self):
         oled.centre_text(f"{self.state.texts[self.state.text_index]}\n\n")
-        oled.fill_rect(59, 18, 4, 8, 1)
-        oled.fill_rect(65, 18, 4, 8, 1)
+        if self.blink_on:
+            oled.fill_rect(59, 18, 4, 8, 1)
+            oled.fill_rect(65, 18, 4, 8, 1)
 
 
 class Morse(EuroPiScript):
