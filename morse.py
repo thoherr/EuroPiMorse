@@ -213,13 +213,19 @@ class Mode:
         return self
 
     def blink(self):
-        on = (ticks_ms() % BLINK_MS) < ( BLINK_MS / BLINK_RATIO )
+        on = (ticks_ms() % BLINK_MS) < (BLINK_MS / BLINK_RATIO)
         if self.blink_on != on:
             self.blink_on = on
             self.display_data_changed = True
 
     def update_state(self):
         self.blink()
+
+    def paint_centered_text(self, line, content):
+        content = self.state.texts[self.state.text_index]
+        x = int((oled.width - ((len(content) + 1) * 7)) / 2) - 1
+        y = int((line * 9) + 1)
+        oled.text(f"{content}", x, y)
 
     def update_display(self):
         if self.display_data_changed:
@@ -394,7 +400,7 @@ class Paused(Mode):
         cv6.off()
 
     def paint_display(self):
-        oled.centre_text(f"{self.state.texts[self.state.text_index]}\n\n")
+        self.paint_centered_text(0, self.state.texts[self.state.text_index])
         if self.blink_on:
             oled.fill_rect(59, 18, 4, 8, 1)
             oled.fill_rect(65, 18, 4, 8, 1)
