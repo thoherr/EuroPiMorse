@@ -265,6 +265,9 @@ class Paused(MainMode):
         self.display_data_changed = True
         return Running(self.state)
 
+    def clock(self):
+        self.update_cvs()
+
     def update_cvs(self):
         cv1.off()
         cv2.off()
