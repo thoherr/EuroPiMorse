@@ -312,26 +312,26 @@ class Running(Mode):
 
 
 class ChangeCV(Mode):
-    def __init__(self, parent):
-        super().__init__("CHANGE_CV", parent.state)
-        self.parent = parent
+    def __init__(self, main_mode):
+        super().__init__("CHANGE_CV", main_mode.state)
+        self.main_mode = main_mode
         self.old_cv = self.state.pitch_cv
         self.current_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
 
     def b1_klick(self):
         self.display_data_changed = True
-        return self.parent
+        return self.main_mode
 
     def b2_klick(self):
         self.state.pitch_cv = self.old_cv
         self.display_data_changed = True
-        return self.parent
+        return self.main_mode
 
     def clock(self):
-        self.parent.clock()
+        self.main_mode.clock()
 
     def update_cvs(self):
-        self.parent.update_cvs()
+        self.main_mode.update_cvs()
 
     def update_state(self):
         super().update_state()
@@ -340,37 +340,37 @@ class ChangeCV(Mode):
             self.current_cv = knob_cv
             self.state.pitch_cv = knob_cv
             self.display_data_changed = True
-        self.display_data_changed = self.display_data_changed or self.parent.display_data_changed
+        self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
 
     def paint_display(self):
-        if self.parent.gate:
+        if self.main_mode.gate:
             self.paint_centered_text(0, self.current_text())
         self.paint_centered_text(1, f"CUR CV {self.old_cv:1.2f}")
         self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.2f}")
 
 
 class ChangeText(Mode):
-    def __init__(self, parent):
-        super().__init__("CHANGE_TEXT", parent.state)
-        self.parent = parent
+    def __init__(self, main_mode):
+        super().__init__("CHANGE_TEXT", main_mode.state)
+        self.main_mode = main_mode
         self.new_index = self.state.text_index
         self.current_index = k1.range(len(self.state.texts))
 
     def b1_klick(self):
         self.state.text_index = self.new_index
-        self.parent.reset_clock()
+        self.main_mode.reset_clock()
         self.display_data_changed = True
-        return self.parent
+        return self.main_mode
 
     def b2_klick(self):
         self.display_data_changed = True
-        return self.parent
+        return self.main_mode
 
     def clock(self):
-        self.parent.clock()
+        self.main_mode.clock()
 
     def update_cvs(self):
-        self.parent.update_cvs()
+        self.main_mode.update_cvs()
 
     def update_state(self):
         super().update_state()
@@ -379,10 +379,10 @@ class ChangeText(Mode):
             self.current_index = index
             self.new_index = index
             self.display_data_changed = True
-        self.display_data_changed = self.display_data_changed or self.parent.display_data_changed
+        self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
 
     def paint_display(self):
-        if self.parent.gate:
+        if self.main_mode.gate:
             self.paint_centered_text(0, self.current_text())
         if self.blink_on:
             self.paint_centered_text(1, "-->")
