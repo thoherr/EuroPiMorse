@@ -32,7 +32,7 @@ cv6: morse code active (running)
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, CHAR_WIDTH, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import oled, CHAR_WIDTH, CHAR_HEIGHT, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
 VERSION = "0.4"
@@ -225,8 +225,8 @@ class Mode:
         self.blink()
 
     def paint_centered_text(self, line, content):
-        x = int((oled.width - ((len(content) + 1) * 7)) / 2) - 1
-        y = int((line * 9) + 1)
+        x = int((oled.width - (len(content) * CHAR_WIDTH)) / 2)
+        y = int((line * (CHAR_HEIGHT + 1)) + 1)
         oled.text(f"{content}", x, y)
 
     def paint_display(self):
@@ -339,7 +339,7 @@ class Running(MainMode):
         RUNNING_OUT.on()
 
     def paint_titleline(self):
-        x_center = int((oled.width - ((len(self.current_char) + 1) * 7)) / 2) - 1
+        x_center = int((oled.width - (len(self.current_char) * CHAR_WIDTH)) / 2)
         x_for_prefix = len(self.prefix) * CHAR_WIDTH
         x_current_char = min(max(x_center, x_for_prefix), oled.width - CHAR_WIDTH)
         y = 1
