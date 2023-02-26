@@ -49,7 +49,7 @@ from europi import (
 )
 from europi_script import EuroPiScript
 
-VERSION = "0.4"
+VERSION = "0.5"
 
 # UI timing
 
