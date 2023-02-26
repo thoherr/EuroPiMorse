@@ -197,6 +197,9 @@ class Mode:
     def clock(self):
         pass
 
+    def reset_clock(self):
+        pass
+
     def b1_klick(self):
         return self
 
@@ -229,6 +232,10 @@ class Mode:
         y = int((line * 9) + 1)
         oled.text(f"{content}", x, y)
 
+    def paint_display(self):
+        self.paint_titleline()
+        self.paint_content()
+
     def update_display(self):
         if self.display_data_changed:
             oled.fill(0)
@@ -240,6 +247,14 @@ class Mode:
 class MainMode(Mode):
     def __init__(self, name, state):
         super().__init__(name, state)
+
+    def b1_short_press(self):
+        self.display_data_changed = True
+        return ChangeCV(self)
+
+    def b2_klick(self):
+        self.display_data_changed = True
+        return ChangeText(self)
 
 
 class Paused(MainMode):
@@ -258,12 +273,13 @@ class Paused(MainMode):
         cv5.off()
         cv6.off()
 
-    def paint_display(self):
+    def paint_titleline(self):
         if self.blink_on:
             self.paint_centered_text(0, self.current_text())
-        else:
-            oled.fill_rect(59, 18, 4, 8, 1)
-            oled.fill_rect(65, 18, 4, 8, 1)
+
+    def paint_content(self):
+        oled.fill_rect(59, 18, 4, 8, 1)
+        oled.fill_rect(65, 18, 4, 8, 1)
 
 
 class Running(MainMode):
@@ -274,14 +290,6 @@ class Running(MainMode):
     def b1_klick(self):
         self.display_data_changed = True
         return Paused(self.state)
-
-    def b1_short_press(self):
-        self.display_data_changed = True
-        return ChangeCV(self)
-
-    def b2_klick(self):
-        self.display_data_changed = True
-        return ChangeText(self)
 
     def cache_mc_data(self):
         self.dits_in_char = self.mc.duration
@@ -333,9 +341,11 @@ class Running(MainMode):
         EOM_OUT.value(self.mc == EOM_MC)
         RUNNING_OUT.on()
 
-    def paint_display(self):
+    def paint_titleline(self):
         if self.gate:
             self.paint_centered_text(0, self.current_text())
+
+    def paint_content(self):
         self.paint_centered_text(1, self.mc.sequence)
         self.paint_centered_text(2, self.mc.char)
 
@@ -348,8 +358,15 @@ class SubMode(Mode):
     def clock(self):
         self.main_mode.clock()
 
+    def update_state(self):
+        super().update_state()
+        self.main_mode.update_state()
+
     def update_cvs(self):
         self.main_mode.update_cvs()
+
+    def paint_titleline(self):
+        self.main_mode.paint_titleline()
 
 
 class ChangeCV(SubMode):
@@ -376,9 +393,7 @@ class ChangeCV(SubMode):
             self.display_data_changed = True
         self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
 
-    def paint_display(self):
-        if self.main_mode.gate:
-            self.paint_centered_text(0, self.current_text())
+    def paint_content(self):
         self.paint_centered_text(1, f"CUR CV {self.old_cv:1.2f}")
         self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.2f}")
 
@@ -408,9 +423,7 @@ class ChangeText(SubMode):
             self.display_data_changed = True
         self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
 
-    def paint_display(self):
-        if self.main_mode.gate:
-            self.paint_centered_text(0, self.current_text())
+    def paint_content(self):
         if self.blink_on:
             self.paint_centered_text(1, "-->")
         self.paint_centered_text(2, self.state.texts[self.new_index])
