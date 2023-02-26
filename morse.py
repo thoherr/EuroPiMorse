@@ -285,7 +285,11 @@ class Running(MainMode):
     def b1_klick(self):
         return Paused(self.state)
 
-    def cache_mc_data(self):
+    def cache_text_and_mc_data(self):
+        max_index  = len(self.current_text()) - 1
+        self.prefix = self.current_text()[0:self.character_tick]
+        self.current_char = (self.current_text()[self.character_tick] if self.character_tick <= max_index else "")
+        self.postfix = (self.current_text()[self.character_tick + 1:] if self.character_tick < max_index else "")
         self.dits_in_char = self.mc.duration
         self.gates = self.mc.gates
         self.gate = False
@@ -295,7 +299,7 @@ class Running(MainMode):
         self.dit_tick = -1
         self.dits_in_char = 1
         self.mc = EOC_MC
-        self.cache_mc_data()
+        self.cache_text_and_mc_data()
 
     def clock(self):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
@@ -317,7 +321,7 @@ class Running(MainMode):
                 self.mc = MORSE_CODE[self.current_text()[self.character_tick]]
             else:
                 self.mc = EOC_MC
-            self.cache_mc_data()
+            self.cache_text_and_mc_data()
         self.gate = self.gates[self.dit_tick]
         self.update_cvs()
 
@@ -336,11 +340,14 @@ class Running(MainMode):
 
     def paint_titleline(self):
         if self.gate:
-            self.paint_centered_text(0, self.current_text())
+            x = int((oled.width - ((len(self.current_char) + 1) * 7)) / 2) - 1
+            y = 1
+            oled.text(f"{self.current_char}", x, y)
 
     def paint_content(self):
         self.paint_centered_text(1, self.mc.sequence)
-        self.paint_centered_text(2, self.mc.char)
+        if self.mc == EOW_MC or self.mc == EOM_MC:
+            self.paint_centered_text(2, self.mc.char)
 
 
 class SubMode(Mode):
