@@ -78,8 +78,8 @@ DAH = "_"
 # (see https://www.johndcook.com/blog/2022/02/25/morse-code-in-musical-notation)
 # a good value is e.g. PITCH_CV = 4.33, which is roughly E4 (659 Hz)
 # So we make the pitch adjustable with K1 and give it some variablilty
-DEFAULT_PITCH_CV = 4.33  # roughly E4 (659 Hz)
-MIN_PITCH_CV = 3.25  # roughly Eb3 (311 Hz)
+DEFAULT_PITCH_CV = 4.333  # roughly E4 (659 Hz)
+MIN_PITCH_CV = 3.250  # roughly Eb3 (311 Hz)
 MAX_PITCH_CV = 5.0  # roughly C5 (1047 Hz)
 PITCH_CV_STEPS = int((MAX_PITCH_CV - MIN_PITCH_CV) * 12)
 
@@ -177,7 +177,9 @@ EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
 EOW_MC = MorseCharacter("EOW", " " * EOW_GAP_LEN)
 EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
 
-DEFAULT_TEXTS = [
+DEFAULT_STATE = [
+    f"{DEFAULT_PITCH_CV}",
+    "0",
     "HELLO WORLD",
     "TEMPUS FUGIT",
     "SOS",
@@ -189,11 +191,36 @@ DEFAULT_TEXTS = [
 
 
 class State:
-    def __init__(self, texts):
-        self.texts = texts
-        self.text_index = 0
-        self.pitch_cv = DEFAULT_PITCH_CV
+    def __init__(self, state_str):
+        if state_str:
+            lines = state_str.splitlines()
+        else:
+            lines = DEFAULT_STATE
+        self._pitch_cv = float(lines[0])
+        self._text_index = int(lines[1])
+        self.texts = lines[2:]
         self.saved = True
+
+    @property
+    def pitch_cv(self):
+        return self._pitch_cv
+
+    @pitch_cv.setter
+    def pitch_cv(self, value):
+        self._pitch_cv = value
+        self.saved = False
+
+    @property
+    def text_index(self):
+        return self._text_index
+
+    @text_index.setter
+    def text_index(self, value):
+        self._text_index = value
+        self.saved = False
+
+    def serialize(self):
+        return f"{self._pitch_cv:1.3f}\n{self._text_index}\n" + "\n".join(self.texts)
 
 
 class Mode:
@@ -404,7 +431,8 @@ class ChangeCV(SubMode):
         return self.main_mode
 
     def b2_klick(self):
-        self.state.pitch_cv = self.old_cv
+        if self.state.pitch_cv != self.old_cv:
+            self.state.pitch_cv = self.old_cv
         return self.main_mode
 
     def update_state(self):
@@ -416,8 +444,8 @@ class ChangeCV(SubMode):
             self.update_cvs()
 
     def paint_content(self):
-        self.paint_centered_text(1, f"CUR CV {self.old_cv:1.2f}")
-        self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.2f}")
+        self.paint_centered_text(1, f"CUR CV {self.old_cv:1.3f}")
+        self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.3f}")
 
 
 class ChangeText(SubMode):
@@ -448,8 +476,6 @@ class ChangeText(SubMode):
 
 
 class Morse(EuroPiScript):
-    state_saved = True
-
     def __init__(self):
         super().__init__()
 
@@ -490,17 +516,11 @@ class Morse(EuroPiScript):
     def save_state(self):
         if self.state.saved or self.last_saved() < SAVE_STATE_INTERVAL:
             return
-        self.state.save_state_str(self.state.texts)
-        # TODO: Save current text index
+        self.save_state_str(self.state.serialize())
         self.state.saved = True
 
     def load_state(self):
-        # TODO: Load current text index
-        state_str = self.load_state_str()
-        if state_str:
-            self.state = State(state_str.splitlines())
-        else:
-            self.state = State(DEFAULT_TEXTS)
+        self.state = State(self.load_state_str())
 
     def main(self):
         oled.centre_text(f"EuroPi\nMorse Code\n{VERSION}")
