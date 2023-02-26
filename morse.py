@@ -180,7 +180,6 @@ class State:
         self.texts = texts
         self.text_index = 0
         self.pitch_cv = DEFAULT_PITCH_CV
-        self.update_display = False
         self.saved = True
 
 
@@ -189,7 +188,6 @@ class Mode:
         self.name = name
         self.state = state
         self.blink_on = False
-        self.display_data_changed = True
 
     def current_text(self):
         return self.state.texts[self.state.text_index]
@@ -222,7 +220,6 @@ class Mode:
         on = (ticks_ms() % BLINK_MS) < (BLINK_MS / BLINK_RATIO)
         if self.blink_on != on:
             self.blink_on = on
-            self.display_data_changed = True
 
     def update_state(self):
         self.blink()
@@ -237,11 +234,9 @@ class Mode:
         self.paint_content()
 
     def update_display(self):
-        if self.display_data_changed:
-            oled.fill(0)
-            self.paint_display()
-            oled.show()
-            self.display_data_changed = False
+        oled.fill(0)
+        self.paint_display()
+        oled.show()
 
 
 class MainMode(Mode):
@@ -249,11 +244,9 @@ class MainMode(Mode):
         super().__init__(name, state)
 
     def b1_short_press(self):
-        self.display_data_changed = True
         return ChangeCV(self)
 
     def b2_klick(self):
-        self.display_data_changed = True
         return ChangeText(self)
 
 
@@ -262,7 +255,6 @@ class Paused(MainMode):
         super().__init__("PAUSED", state)
 
     def b1_klick(self):
-        self.display_data_changed = True
         return Running(self.state)
 
     def clock(self):
@@ -291,7 +283,6 @@ class Running(MainMode):
         self.reset_clock()
 
     def b1_klick(self):
-        self.display_data_changed = True
         return Paused(self.state)
 
     def cache_mc_data(self):
@@ -329,7 +320,6 @@ class Running(MainMode):
             self.cache_mc_data()
         self.gate = self.gates[self.dit_tick]
         self.update_cvs()
-        self.display_data_changed = True
 
     def update_cvs(self):
         GATE_OUT.value(self.gate)
@@ -379,12 +369,10 @@ class ChangeCV(SubMode):
         self.current_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
 
     def b1_klick(self):
-        self.display_data_changed = True
         return self.main_mode
 
     def b2_klick(self):
         self.state.pitch_cv = self.old_cv
-        self.display_data_changed = True
         return self.main_mode
 
     def update_state(self):
@@ -393,8 +381,7 @@ class ChangeCV(SubMode):
         if knob_cv != self.current_cv:
             self.current_cv = knob_cv
             self.state.pitch_cv = knob_cv
-            self.display_data_changed = True
-        self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
+            self.update_cvs()
 
     def paint_content(self):
         self.paint_centered_text(1, f"CUR CV {self.old_cv:1.2f}")
@@ -410,11 +397,9 @@ class ChangeText(SubMode):
     def b1_klick(self):
         self.state.text_index = self.new_index
         self.main_mode.reset_clock()
-        self.display_data_changed = True
         return self.main_mode
 
     def b2_klick(self):
-        self.display_data_changed = True
         return self.main_mode
 
     def update_state(self):
@@ -423,8 +408,6 @@ class ChangeText(SubMode):
         if index != self.current_index:
             self.current_index = index
             self.new_index = index
-            self.display_data_changed = True
-        self.display_data_changed = self.display_data_changed or self.main_mode.display_data_changed
 
     def paint_content(self):
         if self.blink_on:
