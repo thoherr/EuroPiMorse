@@ -237,6 +237,30 @@ class Mode:
             self.display_data_changed = False
 
 
+class Paused(Mode):
+    def __init__(self, state):
+        super().__init__("PAUSED", state)
+
+    def b1_klick(self):
+        self.display_data_changed = True
+        return Running(self.state)
+
+    def update_cvs(self):
+        cv1.off()
+        cv2.off()
+        cv3.off()
+        cv4.off()
+        cv5.off()
+        cv6.off()
+
+    def paint_display(self):
+        if self.blink_on:
+            self.paint_centered_text(0, self.current_text())
+        else:
+            oled.fill_rect(59, 18, 4, 8, 1)
+            oled.fill_rect(65, 18, 4, 8, 1)
+
+
 class Running(Mode):
     def __init__(self, state):
         super().__init__("RUNNING", state)
@@ -311,10 +335,21 @@ class Running(Mode):
         self.paint_centered_text(2, self.mc.char)
 
 
-class ChangeCV(Mode):
-    def __init__(self, main_mode):
-        super().__init__("CHANGE_CV", main_mode.state)
+class SubMode(Mode):
+    def __init__(self, name, main_mode):
+        super().__init__(name, main_mode.state)
         self.main_mode = main_mode
+
+    def clock(self):
+        self.main_mode.clock()
+
+    def update_cvs(self):
+        self.main_mode.update_cvs()
+
+
+class ChangeCV(SubMode):
+    def __init__(self, main_mode):
+        super().__init__("CHANGE_CV", main_mode)
         self.old_cv = self.state.pitch_cv
         self.current_cv = MIN_PITCH_CV + k1.range(PITCH_CV_STEPS + 1) / 12
 
@@ -326,12 +361,6 @@ class ChangeCV(Mode):
         self.state.pitch_cv = self.old_cv
         self.display_data_changed = True
         return self.main_mode
-
-    def clock(self):
-        self.main_mode.clock()
-
-    def update_cvs(self):
-        self.main_mode.update_cvs()
 
     def update_state(self):
         super().update_state()
@@ -349,10 +378,9 @@ class ChangeCV(Mode):
         self.paint_centered_text(2, f"NEW CV {self.state.pitch_cv:1.2f}")
 
 
-class ChangeText(Mode):
+class ChangeText(SubMode):
     def __init__(self, main_mode):
-        super().__init__("CHANGE_TEXT", main_mode.state)
-        self.main_mode = main_mode
+        super().__init__("CHANGE_TEXT", main_mode)
         self.new_index = self.state.text_index
         self.current_index = k1.range(len(self.state.texts))
 
@@ -365,12 +393,6 @@ class ChangeText(Mode):
     def b2_klick(self):
         self.display_data_changed = True
         return self.main_mode
-
-    def clock(self):
-        self.main_mode.clock()
-
-    def update_cvs(self):
-        self.main_mode.update_cvs()
 
     def update_state(self):
         super().update_state()
@@ -387,30 +409,6 @@ class ChangeText(Mode):
         if self.blink_on:
             self.paint_centered_text(1, "-->")
         self.paint_centered_text(2, self.state.texts[self.new_index])
-
-
-class Paused(Mode):
-    def __init__(self, state):
-        super().__init__("PAUSED", state)
-
-    def b1_klick(self):
-        self.display_data_changed = True
-        return Running(self.state)
-
-    def update_cvs(self):
-        cv1.off()
-        cv2.off()
-        cv3.off()
-        cv4.off()
-        cv5.off()
-        cv6.off()
-
-    def paint_display(self):
-        if self.blink_on:
-            self.paint_centered_text(0, self.current_text())
-        else:
-            oled.fill_rect(59, 18, 4, 8, 1)
-            oled.fill_rect(65, 18, 4, 8, 1)
 
 
 class Morse(EuroPiScript):
