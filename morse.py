@@ -1,32 +1,8 @@
 """
 Euro Pi Morse - Morse code sequences generator for Euro Pi
 author: Thomas Herrmann (github.com/thoherr)
-date: 2023-02-19
-labels: sound creation, gate
 
-This script creates the gate signals for the morse code of a given/configurable string.
-
-Description of UI elements is preliminary!
-
-din: clock (one DIT)
-ain: not used (probably selection of words/sentences generated some day or start/stop of code)
-
-k1: select CV for pitch output when in CV adjustment mode
-    select text when in text selection mode
-k2: not used
-
-b1: start/stop morse code (switch between running and pause mode) with klick
-    enter CV adjustment mode with short (1-3 sec) press
-    save selection and return to running mode when in CV adjustment or text selection mode
-b2: switch to text selection mode with klick,
-    discard changes and return to running mode when in CV adjustment or text selection mode
-
-cv1: morse signal (gate)
-cv2: end of character
-cv3: end of word
-cv4: morse signal (CV)
-cv5: end of sequence
-cv6: morse code active (running)
+For user documentation of this script see file morse.md
 
 """
 
