@@ -12,11 +12,11 @@ din: clock (one DIT)
 ain: not used (probably selection of words/sentences generated some day or start/stop of code)
 
 k1: select CV for pitch output when in CV adjustment mode
-    select character to edit when in edit mode
-k2: select text character in edit mode
+    select text when in text selection mode
+k2: not used
 
 b1: start/stop morse code (switch between running and pause mode) with klick
-    enter CV adjustment mode when in running mode and with short (1-3 sec) press
+    enter CV adjustment mode with short (1-3 sec) press
     save selection and return to running mode when in CV adjustment or text selection mode
 b2: switch to text selection mode with klick,
     discard changes and return to running mode when in CV adjustment or text selection mode
