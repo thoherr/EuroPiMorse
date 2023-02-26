@@ -111,7 +111,6 @@ class MorseCharacter:
                 else [False] * SYM_GAP_LEN
             )
         self.duration = len(self.gates)
-        # print(f"{self.char} -> {self.gates}")
 
 
 MORSE_CHARACTERS = [
