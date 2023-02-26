@@ -32,7 +32,21 @@ cv6: morse code active (running)
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, CHAR_WIDTH, CHAR_HEIGHT, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import (
+    oled,
+    CHAR_WIDTH,
+    CHAR_HEIGHT,
+    din,
+    k1,
+    b1,
+    b2,
+    cv1,
+    cv2,
+    cv3,
+    cv4,
+    cv5,
+    cv6,
+)
 from europi_script import EuroPiScript
 
 VERSION = "0.4"
@@ -286,10 +300,18 @@ class Running(MainMode):
         return Paused(self.state)
 
     def cache_text_and_mc_data(self):
-        max_index  = len(self.current_text()) - 1
-        self.prefix = self.current_text()[0:self.character_tick]
-        self.current_char = (self.current_text()[self.character_tick] if self.character_tick <= max_index else "")
-        self.postfix = (self.current_text()[self.character_tick + 1:] if self.character_tick < max_index else "")
+        max_index = len(self.current_text()) - 1
+        self.prefix = self.current_text()[0 : self.character_tick]
+        self.current_char = (
+            self.current_text()[self.character_tick]
+            if self.character_tick <= max_index
+            else ""
+        )
+        self.postfix = (
+            self.current_text()[self.character_tick + 1 :]
+            if self.character_tick < max_index
+            else ""
+        )
         self.dits_in_char = self.mc.duration
         self.gates = self.mc.gates
         self.gate = False
