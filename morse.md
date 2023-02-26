@@ -34,6 +34,7 @@ When saving or discarding changes in adjustment modes, the script returns to the
 #### Knobs
 
 | **Knob** | **Current mode** | **Function** |
+|----------|------------------|--------------|
 | k1 | ADJUST CV | select CV for pitch output |
 | k1 | ADJUST TEXT | select text entry from list of available texts |
 | k2 | ADJUST CV or ADJUST TEXT | not used |
@@ -41,6 +42,7 @@ When saving or discarding changes in adjustment modes, the script returns to the
 #### Buttons
 
 | **Button** | **Press** | **Current mode** | **Function** |
+|------------|-----------|------------------|--------------|
 | b1 | klick | PAUSED |  Switch to RUNNING mode and start morsing the currently selected text |
 | b1 | klick | RUNNING  | Switch to PAUSED mode (stop mording) |
 | b1 | > 1 sec | PAUSED or RUNNING | Switch to ADJUST CV |
@@ -53,6 +55,7 @@ When saving or discarding changes in adjustment modes, the script returns to the
 ### Outputs
 
 | **Port** | **Description** |
+|----------|-----------------|
 | cv1 | morse signal (gate) |
 | cv2 | end of character (gate) |
 | cv3 | end of word (gate) |
