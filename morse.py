@@ -32,7 +32,7 @@ cv6: morse code active (running)
 
 from time import sleep
 from utime import ticks_diff, ticks_ms
-from europi import oled, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
+from europi import oled, CHAR_WIDTH, din, k1, b1, b2, cv1, cv2, cv3, cv4, cv5, cv6
 from europi_script import EuroPiScript
 
 VERSION = "0.4"
@@ -339,10 +339,14 @@ class Running(MainMode):
         RUNNING_OUT.on()
 
     def paint_titleline(self):
-        if self.gate:
-            x = int((oled.width - ((len(self.current_char) + 1) * 7)) / 2) - 1
-            y = 1
-            oled.text(f"{self.current_char}", x, y)
+        x_center = int((oled.width - ((len(self.current_char) + 1) * 7)) / 2) - 1
+        x_for_prefix = len(self.prefix) * CHAR_WIDTH
+        x_current_char = min(max(x_center, x_for_prefix), oled.width - CHAR_WIDTH)
+        y = 1
+        if len(self.prefix) > 0:
+            oled.text(f"{self.prefix}", x_current_char - x_for_prefix, y)
+        if self.gate or self.mc == EOM_MC:
+            oled.text(f"{self.current_char}", x_current_char, y)
 
     def paint_content(self):
         self.paint_centered_text(1, self.mc.sequence)
