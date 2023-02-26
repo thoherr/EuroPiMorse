@@ -237,7 +237,12 @@ class Mode:
             self.display_data_changed = False
 
 
-class Paused(Mode):
+class MainMode(Mode):
+    def __init__(self, name, state):
+        super().__init__(name, state)
+
+
+class Paused(MainMode):
     def __init__(self, state):
         super().__init__("PAUSED", state)
 
@@ -261,7 +266,7 @@ class Paused(Mode):
             oled.fill_rect(65, 18, 4, 8, 1)
 
 
-class Running(Mode):
+class Running(MainMode):
     def __init__(self, state):
         super().__init__("RUNNING", state)
         self.reset_clock()
