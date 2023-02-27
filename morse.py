@@ -128,7 +128,13 @@ MORSE_CHARACTERS = [
     MorseCharacter("8", "___.."),
     MorseCharacter("9", "____."),
     MorseCharacter("0", "_____"),
-    # umlauts and ligatures - not imlemented yet
+    # umlauts and ligatures - not fully imlemented
+    MorseCharacter("Á", ".__._"),
+    MorseCharacter("Ä", "._._"),
+    MorseCharacter("É", ".._.."),
+    MorseCharacter("Ñ", "__.__"),
+    MorseCharacter("Ö", "___."),
+    MorseCharacter("Ü", "..__"),
     # symbols
     MorseCharacter(".", "._._._"),  # AAA
     MorseCharacter(",", "__..__"),  # MIM
@@ -152,6 +158,7 @@ MORSE_CODE = {mc.char: mc for mc in MORSE_CHARACTERS}
 EOC_MC = MorseCharacter("EOC", " " * EOC_GAP_LEN)
 EOW_MC = MorseCharacter("EOW", " " * EOW_GAP_LEN)
 EOM_MC = MorseCharacter("EOM", " " * EOM_GAP_LEN)
+ERROR_MC = MorseCharacter("ERROR", "." * 8)
 
 DEFAULT_STATE = [
     f"{DEFAULT_PITCH_CV}",
