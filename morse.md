@@ -26,6 +26,7 @@ When saving or discarding changes in adjustment modes, the script returns to the
 ### Inputs
 
 | **Port** | **Description** |
+|----------|-----------------|
 | din | clock (one DIT) |
 | ain | not used (probably selection of words/sentences generated some day or start/stop of code) |
 
