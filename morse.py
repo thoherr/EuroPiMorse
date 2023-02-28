@@ -36,6 +36,9 @@ LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
 BLINK_MS = 700
 BLINK_RATIO = 2
 
+# Display properties
+OLED_CHARS_PER_LINE = int(oled.width / CHAR_WIDTH)
+
 # Morse code timing
 # See https://en.wikipedia.org/wiki/Morse_code#Representation,_timing,_and_speeds or
 #     https://de.wikipedia.org/wiki/Morsecode#Zeitschema_und_Veranschaulichung
@@ -243,10 +246,14 @@ class Mode:
     def b2_long_press(self):
         return self
 
+    def blink_triggered(self, blink_state):
+        pass
+
     def blink(self):
         on = (ticks_ms() % BLINK_MS) < (BLINK_MS / BLINK_RATIO)
         if self.blink_on != on:
             self.blink_on = on
+            self.blink_triggered(on)
 
     def update_state(self):
         self.blink()
@@ -438,8 +445,13 @@ class ChangeCV(SubMode):
 class ChangeText(SubMode):
     def __init__(self, main_mode):
         super().__init__("CHANGE_TEXT", main_mode)
-        self.new_index = self.state.text_index
         self.current_index = k1.range(len(self.state.texts))
+        self.new_index = self.state.text_index
+        self.display_text_offset = 0
+        self.number_of_overflow_characters = (
+            len(self.state.texts[self.new_index]) - OLED_CHARS_PER_LINE
+        )
+        print(self.number_of_overflow_characters)
 
     def b1_klick(self):
         self.state.text_index = self.new_index
@@ -455,11 +467,27 @@ class ChangeText(SubMode):
         if index != self.current_index:
             self.current_index = index
             self.new_index = index
+            self.number_of_overflow_characters = (
+                len(self.state.texts[self.new_index]) - OLED_CHARS_PER_LINE
+            )
+            self.display_text_offset = 0
+
+    def blink_triggered(self, blink_state):
+        if blink_state and self.number_of_overflow_characters > 0:
+            self.display_text_offset = (self.display_text_offset + 1) % (
+                self.number_of_overflow_characters + 1
+            )
 
     def paint_content(self):
         if self.blink_on:
             self.paint_centered_text(1, "-->")
-        self.paint_centered_text(2, self.state.texts[self.new_index])
+        self.paint_centered_text(
+            2,
+            self.state.texts[self.new_index][
+                self.display_text_offset : self.display_text_offset
+                + OLED_CHARS_PER_LINE
+            ],
+        )
 
 
 class Morse(EuroPiScript):
