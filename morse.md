@@ -89,3 +89,8 @@ Wikipedia page about Morse code timing.
 Therefore, the range of our CV is between 3.25 V, which is roughly Eb3 (311 Hz) and
 5.0 V, which is roughly C5 (1047 Hz), with a default of 4.333 V, which is roughly E4 (659 Hz).
 
+## Enhancements / Ideas
+
+* Make texts editable (i.a. add new entries, delete entries and edit entries; editor would could enter charaters by knobs like the UI of NetFlix or older car navigation systems)
+* Input to change morsed text (via *ain* ?)
+* Input to start and stop sequence (this could be done already by patching the mandatory clock signal)
