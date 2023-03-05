@@ -13,6 +13,7 @@ from europi import (
     CHAR_WIDTH,
     CHAR_HEIGHT,
     din,
+    ain,
     k1,
     b1,
     b2,
@@ -25,7 +26,7 @@ from europi import (
 )
 from europi_script import EuroPiScript
 
-VERSION = "0.5"
+VERSION = "0.6"
 
 # UI timing
 
@@ -35,6 +36,9 @@ LONG_PRESSED_INTERVAL = 2400  # feels about 4 seconds
 
 BLINK_MS = 700
 BLINK_RATIO = 2
+
+# Threshold for analog input to specify text index
+AIN_TEXTCHANGE_THRESHOLD = 0.1
 
 # Display properties
 OLED_CHARS_PER_LINE = int(oled.width / CHAR_WIDTH)
@@ -360,7 +364,11 @@ class Running(MainMode):
         self.cache_text_and_mc_data()
 
     def read_analogue_input(self):
-        pass
+        analog_percent = ain.percent()
+        if analog_percent > AIN_TEXTCHANGE_THRESHOLD:
+            self.state.text_index = int(
+                (analog_percent - AIN_TEXTCHANGE_THRESHOLD) * len(self.state.texts)
+            )
 
     def handle_end_of_character(self):
         nextctick = self.character_tick + 1
