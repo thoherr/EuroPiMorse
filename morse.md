@@ -23,12 +23,15 @@ The script has several modes of operation. The main modes are *RUNNING* and *PAU
 In order to change parameter values, the paramater adjustment modes *ADJUST CV* and *ADJUST TEXT* can be used.
 When saving or discarding changes in adjustment modes, the script returns to the previous main mode.
 
+The morsed text can be changed manually (see Controls) or via CV input. The text is selected by the percentage of
+the input voltage. If this value is below 0.1% of the input voltage range, the input is ignored.
+
 ### Inputs
 
 | **Port** | **Description** |
 |----------|-----------------|
 | din | clock (one DIT) |
-| ain | not used (probably selection of words/sentences generated some day or start/stop of code) |
+| ain | select morsed text by index into available texts (if above threshold of 0.1%) |
 
 ### Controls
 
