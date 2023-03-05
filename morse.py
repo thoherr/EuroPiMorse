@@ -363,16 +363,17 @@ class Running(MainMode):
         pass
 
     def handle_end_of_character(self):
-        if self.mc != EOM_MC and self.character_tick + 1 == len(self.current_text()):
+        nextctick = self.character_tick + 1
+        if self.mc != EOM_MC and nextctick == len(self.current_text()):
             self.mc = EOM_MC
         elif (
-            self.character_tick + 1 < len(self.current_text())
-            and self.current_text()[self.character_tick + 1] == EOW_CHAR
+            nextctick < len(self.current_text())
+            and self.current_text()[nextctick] == EOW_CHAR
         ):
-            self.character_tick = self.character_tick + 1
+            self.character_tick = nextctick
             self.mc = EOW_MC
         elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
-            self.character_tick = (self.character_tick + 1) % len(self.current_text())
+            self.character_tick = nextctick % len(self.current_text())
             if self.character_tick == 0:
                 self.read_analogue_input()
             self.mc = MORSE_CODE[self.current_text()[self.character_tick]]
