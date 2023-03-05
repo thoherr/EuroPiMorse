@@ -359,27 +359,35 @@ class Running(MainMode):
         self.mc = EOC_MC
         self.cache_text_and_mc_data()
 
+    def read_analogue_input(self):
+        pass
+
+    def handle_end_of_character(self):
+        if self.mc != EOM_MC and self.character_tick + 1 == len(
+            self.current_text()
+        ):
+            self.mc = EOM_MC
+        elif (
+            self.character_tick + 1 < len(self.current_text())
+            and self.current_text()[self.character_tick + 1] == EOW_CHAR
+        ):
+            self.character_tick = self.character_tick + 1
+            self.mc = EOW_MC
+        elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
+            self.character_tick = (self.character_tick + 1) % len(
+                self.current_text()
+            )
+            if self.character_tick == 0:
+                self.read_analogue_input()
+            self.mc = MORSE_CODE[self.current_text()[self.character_tick]]
+        else:
+            self.mc = EOC_MC
+        self.cache_text_and_mc_data()
+
     def clock(self):
         self.dit_tick = (self.dit_tick + 1) % self.dits_in_char
         if self.dit_tick == 0:
-            if self.mc != EOM_MC and self.character_tick + 1 == len(
-                self.current_text()
-            ):
-                self.mc = EOM_MC
-            elif (
-                self.character_tick + 1 < len(self.current_text())
-                and self.current_text()[self.character_tick + 1] == EOW_CHAR
-            ):
-                self.character_tick = self.character_tick + 1
-                self.mc = EOW_MC
-            elif self.mc == EOC_MC or self.mc == EOW_MC or self.mc == EOM_MC:
-                self.character_tick = (self.character_tick + 1) % len(
-                    self.current_text()
-                )
-                self.mc = MORSE_CODE[self.current_text()[self.character_tick]]
-            else:
-                self.mc = EOC_MC
-            self.cache_text_and_mc_data()
+            self.handle_end_of_character()
         self.gate = self.gates[self.dit_tick]
         self.update_cvs()
 
