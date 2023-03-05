@@ -451,7 +451,6 @@ class ChangeText(SubMode):
         self.number_of_overflow_characters = (
             len(self.state.texts[self.new_index]) - OLED_CHARS_PER_LINE
         )
-        print(self.number_of_overflow_characters)
 
     def b1_klick(self):
         self.state.text_index = self.new_index
