@@ -287,6 +287,10 @@ class MainMode(Mode):
 class Paused(MainMode):
     def __init__(self, state):
         super().__init__("PAUSED", state)
+        self.display_text_offset = 0
+        self.number_of_overflow_characters = (
+            len(self.current_text()) - OLED_CHARS_PER_LINE
+        )
 
     def b1_klick(self):
         return Running(self.state)
@@ -302,13 +306,25 @@ class Paused(MainMode):
         cv5.off()
         cv6.off()
 
+    def blink_triggered(self, blink_state):
+        if blink_state and self.number_of_overflow_characters > 0:
+            self.display_text_offset = (self.display_text_offset + 1) % (
+                self.number_of_overflow_characters + 1
+            )
+
     def paint_titleline(self):
-        if self.blink_on:
-            self.paint_centered_text(0, self.current_text())
+        self.paint_centered_text(
+            0,
+            self.current_text()[
+                self.display_text_offset : self.display_text_offset
+                + OLED_CHARS_PER_LINE
+            ],
+        )
 
     def paint_content(self):
-        oled.fill_rect(59, 18, 4, 8, 1)
-        oled.fill_rect(65, 18, 4, 8, 1)
+        if self.blink_on:
+            oled.fill_rect(59, 18, 4, 8, 1)
+            oled.fill_rect(65, 18, 4, 8, 1)
 
 
 class Running(MainMode):
