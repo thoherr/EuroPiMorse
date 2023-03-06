@@ -291,6 +291,7 @@ class MainMode(Mode):
 class Paused(MainMode):
     def __init__(self, state):
         super().__init__("PAUSED", state)
+        self.all_outputs_off()
         self.display_text_offset = 0
         self.number_of_overflow_characters = (
             len(self.current_text()) - OLED_CHARS_PER_LINE
@@ -300,15 +301,15 @@ class Paused(MainMode):
         return Running(self.state)
 
     def clock(self):
-        self.update_cvs()
+        pass
 
-    def update_cvs(self):
-        cv1.off()
-        cv2.off()
-        cv3.off()
-        cv4.off()
-        cv5.off()
-        cv6.off()
+    def all_outputs_off(self):
+        GATE_OUT.off()
+        PITCH_OUT.off()
+        EOC_OUT.off()
+        EOW_OUT.off()
+        EOM_OUT.off()
+        RUNNING_OUT.off()
 
     def blink_triggered(self, blink_state):
         if blink_state and self.number_of_overflow_characters > 0:
@@ -335,6 +336,7 @@ class Running(MainMode):
     def __init__(self, state):
         super().__init__("RUNNING", state)
         self.reset_clock()
+        RUNNING_OUT.on()
 
     def b1_klick(self):
         return Paused(self.state)
@@ -407,7 +409,6 @@ class Running(MainMode):
             (self.mc == EOW_MC or self.mc == EOM_MC and self.dit_tick < EOW_GAP_LEN)
         )
         EOM_OUT.value(self.mc == EOM_MC)
-        RUNNING_OUT.on()
 
     def paint_titleline(self):
         x_center = int((oled.width - (len(self.current_char) * CHAR_WIDTH)) / 2)
